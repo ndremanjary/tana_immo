@@ -42,3 +42,30 @@ Le prestataire réessaie jusqu'à 5 fois s'il n'a pas un `200` en moins de 10 se
 | `express.json()` consomme le corps et ne limite pas la taille. Sans les octets d'origine, la signature ne peut pas être vérifiée. | Élevée | `express.raw` sur cette route seule, limite 100 Ko. Pas de parser JSON global devant elle. |
 
 Limite assumée : un rejeu du même corps est couvert par l'`id`. Une fenêtre de temps (horodatage dans la signature) n'est pas faite. Si le processus meurt après le `200` et avant un effet, le drapeau reste à faux et le prochain envoi le relance.
+
+## Gestion d'incident
+
+### Vendredi 21 h 40
+
+Je décroche. Avant d'ouvrir un graphique : « Je vois l'alerte. Ça a démarré avec votre SMS de 21 h 30. Je stabilise d'abord, je vous rappelle dans dix minutes pour dire ce qui répond. » Je ne donne pas d'heure de correction. Le client a besoin de savoir que quelqu'un tient l'incident.
+
+Je borne ensuite. Une médiane à 9 s, ce sont des requêtes qui attendent, pas un plantage sec. Je regarde si les 5xx et cette latence sont sur toute l'API ou seulement sur `GET /api/listings`, et si la courbe part vers 21 h 35. Si oui, c'est le SMS.
+
+L'extrait B est en production. La campagne envoie tout le monde sur la recherche par ville. Cette route charge toute la ville, `page` est ignoré, puis une requête agence et une requête photos par annonce. Le pool de connexions se remplit, les fiches et le reste attendent, puis passent en 5xx. L'injection sur `city` est un trou réel sur cette route, mais un pic calé sur le SMS s'explique par la charge. Je la note pour demain matin. Je ne la cherche pas pendant que le site est à terre.
+
+Je rends les connexions sans attendre le correctif. `statement_timeout` à 2 s sur le rôle de l'API : une recherche ne garde plus une connexion pendant 9 s. Devant l'API, vingt recherches en parallèle au plus, au-delà un 429 immédiat. Le nombre de serveurs reste celui du soir : la base est pleine, des processus en plus enverraient encore plus de requêtes. Bandeau sur le site : la recherche est dégradée, les fiches restent ouvertes.
+
+Vers 21 h 50 : « La recherche saturait la base. Les requêtes trop longues sont coupées, le nombre de recherches en même temps est plafonné. Les fiches doivent s'ouvrir. La recherche peut encore échouer tant que le SMS amène du monde. La requête, je la corrige demain matin. »
+
+Le lendemain, à froid : déployer la version bornée, paramètre `$1`, jointure, page de 20, index sur la ville et la date. Vérifier que les requêtes en rafale ont disparu et que la médiane est redescendue, puis seulement desserrer le timeout. Une page : horaire, ce qui était inutilisable, la cause, ce qui a tenu vendredi. Avant le prochain SMS, le client prévient, et on rejoue le volume avant d'envoyer.
+
+### Avant le lancement
+
+Grafana, le même endroit pour les quatre, pour être appelé avant les utilisateurs.
+
+1. 5xx de l'API au-dessus de 1 % pendant 5 min. Le fond mesuré est à 0,1 %.
+2. p95 de `GET /api/listings` au-dessus de 800 ms pendant 5 min.
+3. Pool Postgres au-dessus de 70 % pendant 2 min.
+4. Plus de 10 requêtes de recherche actives depuis plus d'1 s.
+
+Les quatre me réveillent. La 3 et la 4 sonnent pendant que le site répond encore.

@@ -12,7 +12,7 @@ type CreatedLead = {
 };
 
 type CrmClientOptions = {
-    /** Par défaut, `CRM_TOKEN` dans l'environnement. */
+    // Par défaut, `CRM_TOKEN` dans l'environnement.
     token?: string;
     fetch?: typeof fetch;
     sleep?: (ms: number) => Promise<void>;

@@ -30,7 +30,7 @@ curl "http://127.0.0.1:3000/api/listings?city=Antananarivo&page=1"
 
 ## Où lire
 
-1. `REPONSES.md` — problèmes des extraits A, B et C.
+1. `REPONSES.md` — problèmes des extraits A, B et C, puis l'incident du vendredi 21 h 40.
 2. `src/listings/searchListings.ts` — extrait B corrigé.
 3. `src/webhooks/paymentWebhook.ts` — extrait C corrigé.
 4. `src/webhooks/signature.ts` — HMAC du corps brut.
@@ -46,6 +46,7 @@ curl "http://127.0.0.1:3000/api/listings?city=Antananarivo&page=1"
 - `POST /webhooks/payment` : signature HMAC SHA-256 (`X-Webhook-Signature`, hexadécimal minuscule ou majuscule), validation, transaction, réponse `200` avec le corps `ok`, puis email et CRM. Un drapeau par effet : un succès n'est pas rejoué, un échec est relancé au prochain envoi du même `id`.
 - `createLead` : `POST https://crm.example.com/v1/leads`, jeton `CRM_TOKEN`. Timeout 5 s, 3 essais. Backoff exponentiel (200 ms, puis 400 ms) sur 500, 502, 503 et sur l'absence de réponse. Sur un 429, l'attente suit `Retry-After`. Un 400 ou un 401 s'arrête tout de suite. `Idempotency-Key` est le hash du lead, identique à chaque essai. Le jeton est retiré des messages d'erreur.
 - `tests/crmClient.test.ts` : 429 puis 201 en respectant `Retry-After` ; trois 500 puis abandon, sans le jeton dans l'erreur ; un 400 n'est pas rejoué ; un timeout est rejoué puis accepté.
+- Gestion d'incident dans `REPONSES.md` : les trente premières minutes de l'incident SMS, puis quatre alertes Grafana avant la mise en production.
 
 ## Contrat utile au front
 
@@ -74,3 +75,10 @@ Le webhook attend un JSON signé sur les octets du corps :
 ```
 
 Un autre `type`, s'il est signé et porte un `id`, reçoit `200` et n'est pas traité. Un paiement incomplet reçoit `400`.
+
+## Temps passé
+
+- Partie 1 : 1 h 15
+- Partie 2 : 40 min
+- Partie 3 : 25 min
+- Total : 2 h 20
