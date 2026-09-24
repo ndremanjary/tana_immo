@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "tsx src/server.ts",
+    "test": "tsx --test tests/crmClient.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
